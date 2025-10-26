@@ -12,7 +12,8 @@ import cutePlant from "@/assets/cute-plant.png";
 interface SessionSummaryProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  studyTime: number;
+  studyTimeSeconds: number;
+  breakTimeSeconds: number;
   breaksCount: number;
   avgStress: number;
 }
@@ -20,7 +21,8 @@ interface SessionSummaryProps {
 export const SessionSummary = ({
   open,
   onOpenChange,
-  studyTime,
+  studyTimeSeconds,
+  breakTimeSeconds,
   breaksCount,
   avgStress,
 }: SessionSummaryProps) => {
@@ -30,11 +32,16 @@ export const SessionSummary = ({
     return "You worked hard! Remember to take care of yourself. 💚";
   };
 
-  const formatTime = (minutes: number) => {
-    const hours = Math.floor(minutes / 60);
-    const mins = minutes % 60;
-    if (hours === 0) return `${mins} minutes`;
-    return `${hours} hour${hours > 1 ? 's' : ''} ${mins} minutes`;
+  const formatHMS = (totalSeconds: number) => {
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+
+    const hh = hours.toString().padStart(2, "0");
+    const mm = minutes.toString().padStart(2, "0");
+    const ss = seconds.toString().padStart(2, "0");
+
+    return `${hh}:${mm}:${ss}`;
   };
 
   return (
@@ -54,7 +61,7 @@ export const SessionSummary = ({
           <div className="grid grid-cols-2 gap-4">
             <div className="p-4 bg-card rounded-xl border-2 border-border text-center">
               <Clock className="w-6 h-6 text-primary mx-auto mb-2" />
-              <p className="text-2xl font-bold text-foreground">{formatTime(studyTime)}</p>
+              <p className="text-2xl font-bold text-foreground">{formatHMS(studyTimeSeconds)}</p>
               <p className="text-xs text-muted-foreground">Studied</p>
             </div>
             
