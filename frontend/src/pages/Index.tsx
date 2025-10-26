@@ -31,8 +31,11 @@ const Index = () => {
   const [summaryBreakSeconds, setSummaryBreakSeconds] = useState(0);
   const [summaryBreaksCount, setSummaryBreaksCount] = useState(0);
 
+  const [isMonitoring, setIsMonitoring] = useState(true);
+  const [stressLevel, setStressLevel] = useState(35);
+  const [checkInInterval, setCheckInInterval] = useState(30);
   
-  // Mock stress data for chart
+    // Mock stress data for chart
   const [stressData, setStressData] = useState([
     { time: "10:00", stress: 20 },
     { time: "10:15", stress: 25 },
@@ -41,6 +44,8 @@ const Index = () => {
     { time: "11:00", stress: 40 },
     { time: "11:15", stress: 35 },
   ]);
+
+
 
       // --- ticking logic passed down into TimeTracker ---
   const handleTickStudy = () => {
@@ -136,6 +141,38 @@ const Index = () => {
     stressData.reduce((sum, point) => sum + point.stress, 0) / stressData.length
   );
 
+  const endSessionAndShowSummary = () => {
+    // freeze what just happened
+    setSummaryStudySeconds(studySeconds);
+    setSummaryBreakSeconds(breakSeconds);
+    setSummaryBreaksCount(breaksCount);
+
+        // open summary dialog
+    setShowSummary(true);
+
+    // reset live dashboard
+    setMode("idle");
+    setStudySeconds(0);
+    setBreakSeconds(0);
+    setBreaksCount(0);
+
+    // also stop monitoring state if you want the header button to flip
+    setIsMonitoring(false);
+  };
+
+  // This connects to your header Pause/Resume
+  const handleToggleMonitoring = () => {
+    if (isMonitoring) {
+      // currently running -> pause means "wrap up this block and summarize"
+      endSessionAndShowSummary();
+    } else {
+      // currently paused -> resume means "start studying again"
+      setIsMonitoring(true);
+      setMode("study"); // optional, starts counting study again
+    }
+  };
+
+  
   return (
     <div 
       className="min-h-screen bg-background relative overflow-hidden"
@@ -192,6 +229,7 @@ const Index = () => {
               {/* Stress Meter and Time Tracker Row */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <StressMeter stressLevel={stressLevel} />
+                
                 <TimeTracker
                   mode={mode}
                   studySeconds={studySeconds}
@@ -232,7 +270,6 @@ const Index = () => {
         open={showSummary}
         onOpenChange={setShowSummary}
         studyTimeSeconds={summaryStudySeconds}
-        studyTime={studyTime}
         breakTimeSeconds={summaryBreakSeconds}
         breaksCount={summaryBreaksCount}
         avgStress={avgStress}
