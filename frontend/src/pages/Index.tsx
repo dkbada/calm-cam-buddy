@@ -13,67 +13,36 @@ import calmBackground from "@/assets/calm-background.jpg";
 type Mode = "idle" | "study" | "break";
 
 const Index = () => {
-  const [studyTime, setStudyTime] = useState(45); // Mock data
-  const [breakTime, setBreakTime] = useState(15); // Mock data
+  const [studyTime, setStudyTime] = useState(45);
+  const [breakTime, setBreakTime] = useState(15);
 
-    // --- study/break state that TimeTracker will control ---
   const [mode, setMode] = useState<Mode>("idle");
   const [studySeconds, setStudySeconds] = useState(0);
   const [breakSeconds, setBreakSeconds] = useState(0);
   const [breaksCount, setBreaksCount] = useState(0);
 
-  // --- summary modal state ---
   const [showSummary, setShowSummary] = useState(false);
   const [summaryStudySeconds, setSummaryStudySeconds] = useState(0);
   const [summaryBreakSeconds, setSummaryBreakSeconds] = useState(0);
   const [summaryBreaksCount, setSummaryBreaksCount] = useState(0);
 
   const [isMonitoring, setIsMonitoring] = useState(true);
-  const [stressLevel, setStressLevel] = useState(35);
-  const [checkInInterval, setCheckInInterval] = useState(30);
-  
-    // Mock stress data for chart
-  const [stressData, setStressData] = useState([
-    { time: "10:00", stress: 20 },
-    { time: "10:15", stress: 25 },
-    { time: "10:30", stress: 35 },
-    { time: "10:45", stress: 30 },
-    { time: "11:00", stress: 40 },
-    { time: "11:15", stress: 35 },
-  ]);
+  const [stressLevel, setStressLevel] = useState(0);
+  const [checkInInterval, setCheckInInterval] = useState(5); // seconds
 
-  // --- average stress for session summary ---
+  const [stressData, setStressData] = useState<{time:string, stress:number}[]>([]);
+
   const avgStress =
     stressData.length > 0
-    ? Math.round(stressData.reduce((sum, entry) => sum + entry.stress, 0) / stressData.length)
-    : 0;
+      ? Math.round(stressData.reduce((sum, entry) => sum + entry.stress, 0) / stressData.length)
+      : 0;
 
+  // --- Study / Break timers ---
+  const handleTickStudy = () => setStudySeconds(prev => prev + 1);
+  const handleTickBreak = () => setBreakSeconds(prev => prev + 1);
+  const handleStartStudy = () => { setMode("study"); setBreakSeconds(0); };
+  const handleStartBreak = () => { setMode("break"); setBreaksCount(prev => prev + 1); setBreakSeconds(0); };
 
-      // --- ticking logic passed down into TimeTracker ---
-  const handleTickStudy = () => {
-    setStudySeconds((prev) => prev + 1);
-  };
-
-  const handleTickBreak = () => {
-    setBreakSeconds((prev) => prev + 1);
-  };
-
-  // --- user presses "Start Study Session" in TimeTracker ---
-  const handleStartStudy = () => {
-    setMode("study");
-    // optional: if you want starting study to reset break mode:
-    setBreakSeconds(0);
-  };
-
-  // --- user presses "Start Break" in TimeTracker ---
-  const handleStartBreak = () => {
-    setMode("break");
-    setBreaksCount((prev) => prev + 1);
-    // optional: reset break timer for each break instead of cumulative:
-    setBreakSeconds(0);
-  };
-
-  // Encouraging messages that rotate
   const encouragingMessages = [
     "You're doing amazing! Remember to breathe deeply and stay hydrated. 🌿",
     "Great focus! Don't forget to stretch your muscles every now and then. 💪",
@@ -83,122 +52,79 @@ const Index = () => {
   ];
   
   const [currentMessage, setCurrentMessage] = useState(encouragingMessages[0]);
-
-  // Rotate encouraging messages
   useEffect(() => {
     const interval = setInterval(() => {
       setCurrentMessage(encouragingMessages[Math.floor(Math.random() * encouragingMessages.length)]);
-    }, 30000); // Change every 30 seconds
-    
+    }, 30000);
     return () => clearInterval(interval);
   }, []);
 
-  // Simulate stress level changes when monitoring
+  // --- Fetch live stress data ---
   useEffect(() => {
     if (!isMonitoring) return;
-    
-    const interval = setInterval(() => {
-      setStressLevel(prev => {
-        const change = Math.random() * 10 - 5; // Random change between -5 and +5
-        const newLevel = Math.max(0, Math.min(100, prev + change));
-        return Math.round(newLevel);
-      });
-      
-      setStudyTime(prev => prev + 1);
-    }, 5000); // Update every 5 seconds
-    
+
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch("/stress");
+        const data = await res.json();
+        const newStress = data.stress;
+        setStressLevel(newStress);
+
+        const now = new Date();
+        const timeStr = now.getHours().toString().padStart(2,"0") + ":" + now.getMinutes().toString().padStart(2,"0");
+        setStressData(prev => [...prev, {time: timeStr, stress: newStress}].slice(-30)); // keep last 30 entries
+      } catch (err) {
+        console.error("Failed to fetch stress:", err);
+      }
+    }, checkInInterval * 1000);
+
     return () => clearInterval(interval);
-  }, [isMonitoring]);
+  }, [isMonitoring, checkInInterval]);
 
   const endSessionAndShowSummary = () => {
-    // freeze what just happened
     setSummaryStudySeconds(studySeconds);
     setSummaryBreakSeconds(breakSeconds);
     setSummaryBreaksCount(breaksCount);
-
-        // open summary dialog
     setShowSummary(true);
 
-    // reset live dashboard
     setMode("idle");
     setStudySeconds(0);
     setBreakSeconds(0);
     setBreaksCount(0);
-
-    // also stop monitoring state if you want the header button to flip
     setIsMonitoring(false);
   };
 
-  // This connects to your header Pause/Resume
   const handleToggleMonitoring = () => {
-    if (isMonitoring) {
-      // currently running -> pause means "wrap up this block and summarize"
-      endSessionAndShowSummary();
-    } else {
-      // currently paused -> resume means "start studying again"
-      setIsMonitoring(true);
-      setMode("study"); // optional, starts counting study again
-    }
+    if (isMonitoring) endSessionAndShowSummary();
+    else { setIsMonitoring(true); setMode("study"); }
   };
 
-  
   return (
     <div 
       className="min-h-screen bg-background relative overflow-hidden"
-      style={{
-        backgroundImage: `url(${calmBackground})`,
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-        backgroundAttachment: 'fixed',
-      }}
+      style={{backgroundImage: `url(${calmBackground})`, backgroundSize:'cover', backgroundPosition:'center', backgroundAttachment:'fixed'}}
     >
-      {/* Overlay for better readability */}
       <div className="absolute inset-0 bg-background/80 backdrop-blur-sm" />
-      
       <div className="relative z-10">
-        {/* Header */}
         <header className="border-b border-border/50 bg-card/80 backdrop-blur-md shadow-sm">
-          <div className="container mx-auto px-4 py-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-                  <span className="text-3xl">🌱</span>
-                  Study Calm
-                </h1>
-                <p className="text-sm text-muted-foreground">Your mindful study companion</p>
-              </div>
-              
-              <Button
-                onClick={handleToggleMonitoring}
-                size="lg"
-                variant={isMonitoring ? "outline" : "default"}
-                className="gap-2"
-              >
-                {isMonitoring ? (
-                  <>
-                    <Pause className="w-5 h-5" />
-                    Pause Session
-                  </>
-                ) : (
-                  <>
-                    <Play className="w-5 h-5" />
-                    Resume Session
-                  </>
-                )}
-              </Button>
+          <div className="container mx-auto px-4 py-4 flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
+                <span className="text-3xl">🌱</span> Study Calm
+              </h1>
+              <p className="text-sm text-muted-foreground">Your mindful study companion</p>
             </div>
+            <Button onClick={handleToggleMonitoring} size="lg" variant={isMonitoring ? "outline":"default"} className="gap-2">
+              {isMonitoring ? <><Pause className="w-5 h-5" /> Pause Session</> : <><Play className="w-5 h-5" /> Resume Session</>}
+            </Button>
           </div>
         </header>
 
-        {/* Main Content */}
         <main className="container mx-auto px-4 py-8">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Left Column */}
             <div className="lg:col-span-2 space-y-6">
-              {/* Stress Meter and Time Tracker Row */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <StressMeter stressLevel={stressLevel} />
-                
                 <TimeTracker
                   mode={mode}
                   studySeconds={studySeconds}
@@ -210,18 +136,11 @@ const Index = () => {
                   onStartBreak={handleStartBreak}
                 />
               </div>
-
-              {/* Encouraging Message */}
               <EncouragingMessage message={currentMessage} />
-
-              {/* Camera Stream */}
               <CameraStream />
-
-              {/* Stress Chart */}
               <StressChart data={stressData} />
             </div>
 
-            {/* Right Column - Settings */}
             <div className="space-y-6">
               <SettingsPanel
                 isMonitoring={isMonitoring}
@@ -234,7 +153,6 @@ const Index = () => {
         </main>
       </div>
 
-      {/* Session Summary Dialog */}
       <SessionSummary
         open={showSummary}
         onOpenChange={setShowSummary}
@@ -248,3 +166,4 @@ const Index = () => {
 };
 
 export default Index;
+
