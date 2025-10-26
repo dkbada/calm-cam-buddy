@@ -73,7 +73,7 @@ export const TimeTracker = ({
           variant={canStartStudy ? "default" : "outline"}
         >
           <Play className="w-4 h-4" />
-          <span>Start Study Session</span>
+          <span>Start Studying</span>
         </Button>
 
         <Button
