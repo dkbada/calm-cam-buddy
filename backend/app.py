@@ -39,3 +39,17 @@ def serve(path):
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=False)
+
+current_mode = "idle"
+study_seconds = 0
+break_seconds = 0
+is_monitoring = False
+
+@app.route('/session')
+def session_status():
+    return jsonify({
+        "mode": current_mode,
+        "is_monitoring": is_monitoring,
+        "study_seconds": study_seconds,
+        "break_seconds": break_seconds
+    })
