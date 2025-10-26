@@ -76,7 +76,7 @@ export const TimeTracker = () => {
         </Button>
 
         <Button
-          onClixck={handleStartBreak}
+          onClick={handleStartBreak}
           disabled={!canStartBreak}
           className="flex-1 flex items-center justify-center gap-2"
           variant={canStartBreak ? "secondary" : "outline"}
