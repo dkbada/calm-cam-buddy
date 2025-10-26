@@ -14,10 +14,8 @@ type Mode = "idle" | "study" | "break";
 
 const Index = () => {
   const [isMonitoring, setIsMonitoring] = useState(true);
-  const [showSummary, setShowSummary] = useState(false);
   const [studyTime, setStudyTime] = useState(45); // Mock data
   const [breakTime, setBreakTime] = useState(15); // Mock data
-  const [breaksCount, setBreaksCount] = useState(3);
   const [stressLevel, setStressLevel] = useState(35);
   const [checkInInterval, setCheckInInterval] = useState(30);
 
@@ -87,6 +85,7 @@ const Index = () => {
     setStudySeconds(0);
     setBreakSeconds(0);
     setBreaksCount(0);
+  };
 
   // Encouraging messages that rotate
   const encouragingMessages = [
