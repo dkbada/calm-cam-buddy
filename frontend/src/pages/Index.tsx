@@ -10,6 +10,8 @@ import { SessionSummary } from "@/components/SessionSummary";
 import { Play, Pause } from "lucide-react";
 import calmBackground from "@/assets/calm-background.jpg";
 
+type Mode = "idle" | "study" | "break";
+
 const Index = () => {
   const [isMonitoring, setIsMonitoring] = useState(true);
   const [showSummary, setShowSummary] = useState(false);
@@ -18,6 +20,19 @@ const Index = () => {
   const [breaksCount, setBreaksCount] = useState(3);
   const [stressLevel, setStressLevel] = useState(35);
   const [checkInInterval, setCheckInInterval] = useState(30);
+
+    // --- study/break state that TimeTracker will control ---
+  const [mode, setMode] = useState<Mode>("idle");
+  const [studySeconds, setStudySeconds] = useState(0);
+  const [breakSeconds, setBreakSeconds] = useState(0);
+  const [breaksCount, setBreaksCount] = useState(0);
+
+  // --- summary modal state ---
+  const [showSummary, setShowSummary] = useState(false);
+  const [summaryStudySeconds, setSummaryStudySeconds] = useState(0);
+  const [summaryBreakSeconds, setSummaryBreakSeconds] = useState(0);
+  const [summaryBreaksCount, setSummaryBreaksCount] = useState(0);
+
   
   // Mock stress data for chart
   const [stressData, setStressData] = useState([
@@ -28,6 +43,50 @@ const Index = () => {
     { time: "11:00", stress: 40 },
     { time: "11:15", stress: 35 },
   ]);
+
+      // --- ticking logic passed down into TimeTracker ---
+  const handleTickStudy = () => {
+    setStudySeconds((prev) => prev + 1);
+  };
+
+  const handleTickBreak = () => {
+    setBreakSeconds((prev) => prev + 1);
+  };
+
+  // --- user presses "Start Study Session" in TimeTracker ---
+  const handleStartStudy = () => {
+    setMode("study");
+    // optional: if you want starting study to reset break mode:
+    setBreakSeconds(0);
+  };
+
+  // --- user presses "Start Break" in TimeTracker ---
+  const handleStartBreak = () => {
+    setMode("break");
+    setBreaksCount((prev) => prev + 1);
+    // optional: reset break timer for each break instead of cumulative:
+    setBreakSeconds(0);
+  };
+
+  // --- when user ENDS the whole session (for example your Pause Session button) ---
+  // this is where we:
+  // 1. copy current times to summary*
+  // 2. open summary modal
+  // 3. reset timers back to zero
+  const endSessionAndShowSummary = () => {
+    // freeze current stats for the modal
+    setSummaryStudySeconds(studySeconds);
+    setSummaryBreakSeconds(breakSeconds);
+    setSummaryBreaksCount(breaksCount);
+
+    // show modal
+    setShowSummary(true);
+
+    // reset live counters for next session
+    setMode("idle");
+    setStudySeconds(0);
+    setBreakSeconds(0);
+    setBreaksCount(0);
 
   // Encouraging messages that rotate
   const encouragingMessages = [
@@ -134,10 +193,15 @@ const Index = () => {
               {/* Stress Meter and Time Tracker Row */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <StressMeter stressLevel={stressLevel} />
-                <TimeTracker 
-                  studyTime={studyTime} 
-                  breakTime={breakTime}
+                <TimeTracker
+                  mode={mode}
+                  studySeconds={studySeconds}
+                  breakSeconds={breakSeconds}
                   breaksCount={breaksCount}
+                  onTickStudy={handleTickStudy}
+                  onTickBreak={handleTickBreak}
+                  onStartStudy={handleStartStudy}
+                  onStartBreak={handleStartBreak}
                 />
               </div>
 
@@ -168,8 +232,10 @@ const Index = () => {
       <SessionSummary
         open={showSummary}
         onOpenChange={setShowSummary}
+        studyTimeSeconds={summaryStudySeconds}
         studyTime={studyTime}
-        breaksCount={breaksCount}
+        breakTimeSeconds={summaryBreakSeconds}
+        breaksCount={summaryBreaksCount}
         avgStress={avgStress}
       />
     </div>
