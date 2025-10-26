@@ -13,11 +13,8 @@ import calmBackground from "@/assets/calm-background.jpg";
 type Mode = "idle" | "study" | "break";
 
 const Index = () => {
-  const [isMonitoring, setIsMonitoring] = useState(true);
   const [studyTime, setStudyTime] = useState(45); // Mock data
   const [breakTime, setBreakTime] = useState(15); // Mock data
-  const [stressLevel, setStressLevel] = useState(35);
-  const [checkInInterval, setCheckInInterval] = useState(30);
 
     // --- study/break state that TimeTracker will control ---
   const [mode, setMode] = useState<Mode>("idle");
@@ -45,6 +42,11 @@ const Index = () => {
     { time: "11:15", stress: 35 },
   ]);
 
+  // --- average stress for session summary ---
+  const avgStress =
+    stressData.length > 0
+    ? Math.round(stressData.reduce((sum, entry) => sum + entry.stress, 0) / stressData.length)
+    : 0;
 
 
       // --- ticking logic passed down into TimeTracker ---
@@ -69,27 +71,6 @@ const Index = () => {
     setBreaksCount((prev) => prev + 1);
     // optional: reset break timer for each break instead of cumulative:
     setBreakSeconds(0);
-  };
-
-  // --- when user ENDS the whole session (for example your Pause Session button) ---
-  // this is where we:
-  // 1. copy current times to summary*
-  // 2. open summary modal
-  // 3. reset timers back to zero
-  const endSessionAndShowSummary = () => {
-    // freeze current stats for the modal
-    setSummaryStudySeconds(studySeconds);
-    setSummaryBreakSeconds(breakSeconds);
-    setSummaryBreaksCount(breaksCount);
-
-    // show modal
-    setShowSummary(true);
-
-    // reset live counters for next session
-    setMode("idle");
-    setStudySeconds(0);
-    setBreakSeconds(0);
-    setBreaksCount(0);
   };
 
   // Encouraging messages that rotate
@@ -128,18 +109,6 @@ const Index = () => {
     
     return () => clearInterval(interval);
   }, [isMonitoring]);
-
-  const handleToggleMonitoring = () => {
-    if (isMonitoring) {
-      // Stopping monitoring - show summary
-      setShowSummary(true);
-    }
-    setIsMonitoring(!isMonitoring);
-  };
-
-  const avgStress = Math.round(
-    stressData.reduce((sum, point) => sum + point.stress, 0) / stressData.length
-  );
 
   const endSessionAndShowSummary = () => {
     // freeze what just happened
